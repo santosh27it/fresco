@@ -1,0 +1,119 @@
+--incremental append
+--check-cloumn
+--last-value
+
+(-) for generic argument
+(--) for tool specific argument
+
+sqoop import (generic-args) (import-args)
+
+sqoop import -D oraoop.timestamp.string=false  -D hadoop.security.credential.provider.path=jceks://hdfs/CONSUMER/RETIREMENT_DL/RAW/IR_NAVISYS_CONNEXT_DB/JCEKS/sqoop.passwd.jceks --connect jdbc:oracle:thin:@"(description=(address=(protocol=tcp)(host=a2ec702c1-scan.us2.ocm.s7130945.oraclecloudatcustomer.com)(port=1521))(connect_data=(SERVICE_NAME=SLRHOQA3.us2.ocm.s7130945.oraclecloudatcustomer.com)))" --username NV17_QA_ADW_CRDL --password-alias nvss_qa.password.alias -m 1 --fields-terminated-by '\001' --null-string '' --null-non-string '' --query "`cat /LAND/CONSUMER/RETIREMENT_DL/IR_NAVISYS/SQL/T_SUN_LAST_PRCSDATE_TXN.SQL`" --delete-target-dir --target-dir '/CONSUMER/RETIREMENT_DL/RAW/IR_NAVISYS_CONNEXT_DB/STAGING/T_SUN_LAST_PRCSDATE_TXN' 
+
+Problem Faced in Talend accessing Hadoop ansd spark jobs:--
+
+1:- Context can't be loaded in bigdata batch jobs.Need to use normal job to pass the context into bigdata batch child jobs.
+2:- In Big data batch job, use of contextulized HDFS cluster wont work if hive component is being used in spark jobs.
+3:- In Cassandra,CSQL should be simple and Update will work as insert if no matching key is found.
+4:- In Sqoop, we used keystore files using command "hadoop credential" to have better control of accessability on cluster.
+5:- 
+
+
+SQOOP Use cases
+---------------
+
+1. Import  all data from  source table in fulload and incremental fashion.
+
+Hint:
+
+$ sqoop import --connect jdbc:mysql://10.170.9.92/AI_BIGDATA_B13 --username AI_BD_B13 --p U$er@123 --table cust_with_key --target-dir /user/1301857/customer -m1
+
+
+$ sqoop import --connect jdbc:mysql://localhost/db --username foo --P --table TEST --target-dir /dev/scripts/training \
+	--incremental append --last-value "7000" --check-column "ID"
+
+$ sqoop eval  --connect jdbc:mysql://localhost/db --username foo --P --query "select count(*) from RDMD.COUNTRY_INFO"
+
+
+2. Create a saved job of above icremntal sqoop import and execute it.
+
+Hint:
+
+$ sqoop job --create sqoop_job_demo -- import --connect jdbc:mysql://localhost/db --username foo --P --table TEST --target-dir /dev/scripts/training \
+	--incremental append --last-value "7000" --check-column "ID"
+
+
+$ sqoop job --exec sqoop_job_demo
+
+
+3. Create a free-form Query Imports by joining 2 tables.
+
+Sample:
+
+ sqoop import \
+  --query 'SELECT a.*, b.* FROM a JOIN b on (a.id == b.id) WHERE $CONDITIONS' \
+  --split-by a.id --target-dir /user/foo/joinresults
+
+
+
+4. Increase number of mappers and verify performance.
+
+Note:
+
+Perform the import by using the -m or --num-mappers argument.
+Each of these arguments takes an integer value which corresponds to the degree of parallelism to employ.
+
+When performing parallel imports, Sqoop needs a criterion by which it can split the workload.
+Sqoop uses a splitting column to split the workload. 
+
+
+5. Import data in sequence file format and avro format with snappy compression
+
+Note:
+
+import data in one of two file formats: delimited text or SequenceFiles.
+
+You can compress your data by using the deflate (gzip) algorithm with the -z or --compress argument, 
+or specify any Hadoop compression codec using the --compression-codec argument. 
+This applies to SequenceFile, text, and Avro files.
+
+
+
+6 Import data into a hive table (make use of below arguements)
+
+Argument	Description
+--hive-home <dir>	Override $HIVE_HOME
+--hive-import	Import tables into Hive (Uses Hive’s default delimiters if none are set.)
+--hive-overwrite	Overwrite existing data in the Hive table.
+--create-hive-table	If set, then the job will fail if the target hive
+table exits. By default this property is false.
+--hive-table <table-name>	Sets the table name to use when importing to Hive.
+--hive-drop-import-delims	Drops \n, \r, and \01 from string fields when importing to Hive.
+--hive-delims-replacement	Replace \n, \r, and \01 from string fields with user defined string when importing to Hive.
+--hive-partition-key	Name of a hive field to partition are sharded on
+--hive-partition-value <v>	String-value that serves as partition key for this imported into hive in this job.
+--map-column-hive <map>	Override default mapping from SQL type to Hive type for configured columns.
+
+
+7. Import data into a HBASE table (make use of below arguements)
+
+Argument	Description
+--column-family <family>	Sets the target column family for the import
+--hbase-create-table	If specified, create missing HBase tables
+--hbase-row-key <col>	Specifies which input column to use as the row key
+In case, if input table contains composite
+key, then <col> must be in the form of a
+comma-separated list of composite key
+attributes
+--hbase-table <table-name>	Specifies an HBase table to use as the target instead of HDFS
+--hbase-bulkload	Enables bulk loading
+
+
+8. Export data from a HDFS directory to a mysql table.
+
+Hint:
+
+$ sqoop export --connect jdbc:mysql://localhost/db --username foo --export-dir /dev/scripts/sqooptraining --table FINAL --input-fields-terminated-by ","
+
+
+Reference:
+https://sqoop.apache.org/docs/1.4.6/SqoopUserGuide.html#_introduction
